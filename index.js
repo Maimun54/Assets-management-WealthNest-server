@@ -27,9 +27,15 @@ async function run() {
     await client.connect();
 
     const usersCollection =client.db("WealthNest").collection("users")   
-    // const adminCollection =client.db("WealthNest").collection("admin")
+    const employeeCollection =client.db("WealthNest").collection("ECustomRequest")
     
 //employee related api
+
+    app.post('/ECustomRequest',async(req,res)=>{
+      const ECustomRequest = req.body;
+      const result =await employeeCollection.insertOne(ECustomRequest)
+      res.send(result)
+    })
 
     app.post('/users',async(req,res)=>{
       const users = req.body;
@@ -42,18 +48,22 @@ async function run() {
       const result =await usersCollection.insertOne(users)
       res.send(result)
     })
-//admin related api 
-// app.post('/employees',async(req,res)=>{
-//   const employee = req.body;
-//   const query ={email:employee.email}
-//   const existingUser = await employeeCollection.findOne(query)
-//   if(existingUser){
-//     return res.send({message:'user already have',insertedId:null})
-//   }
-  
-//   const result =await employeeCollection.insertOne(employee)
-//   res.send(result)
-// })
+
+
+    app.get('/users',async(req,res)=>{
+      const users =req.body
+      const result = await usersCollection.find(users).toArray()
+      res.send(result)
+    })
+
+    app.get('/user/:email',async(req,res)=>{
+      
+      const email =req.params.email;
+      const query ={email:email};
+      const result = await usersCollection.find(query).toArray()
+      res.send(result)
+    })
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
