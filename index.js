@@ -29,6 +29,7 @@ async function run() {
     const usersCollection =client.db("WealthNest").collection("users")   
     const employeeCollection =client.db("WealthNest").collection("ECustomRequest")
     const adminAssetsCollection =client.db("WealthNest").collection("adminAddAssets")
+    const employeeRequestAssetsCollection =client.db("WealthNest").collection("employeeRequestAssets")
     
 //employee related api
 
@@ -37,7 +38,19 @@ async function run() {
       const result =await employeeCollection.insertOne(ECustomRequest)
       res.send(result)
     })
+    //this api for when employee click request button then admin received All Request page
+    app.post('/EAssetRequest',async(req,res)=>{
+      const EAssetRequest = req.body;
+      const result =await employeeRequestAssetsCollection.insertOne(EAssetRequest)
+      res.send(result)
+    })
     
+  app.get('/EAssetRequest',async(req,res)=>{
+    const assets = req.body;
+    const result = await employeeRequestAssetsCollection.find(assets).toArray()
+    res.send(result)
+
+   })
   app.get('/ECustomRequest',async(req,res)=>{
     const assets = req.body;
     const result = await employeeCollection.find(assets).toArray()
@@ -50,7 +63,12 @@ async function run() {
       const result =await adminAssetsCollection.insertOne(adminAddAssets)
       res.send(result)
     })
-    
+    app.get('/adminAddAssets/:id',async(req,res)=>{
+      const id =req.params.id;
+      const query ={_id:new ObjectId(id)}
+      const result = await adminAssetsCollection.findOne(query)
+      res.send(result)
+    })
     app.get('/adminAddAssets',async(req,res)=>{
        const assets = req.body;
        const result = await adminAssetsCollection.find(assets).toArray()
@@ -63,13 +81,46 @@ async function run() {
       const result = await adminAssetsCollection.deleteOne(query)
       res.send(result)
     })
-    app.delete('/ECustomRequest/:id',async(req,res)=>{
+    app.delete('/EAssetRequest/:id',async(req,res)=>{
       const id =req.params.id;
       const query ={_id:new ObjectId(id)}
-      const result = await employeeCollection.deleteOne(query)
+      const result = await employeeRequestAssetsCollection.deleteOne(query)
       res.send(result)
     })
 
+
+    app.patch('/EAssetRequest/:id',async(req,res)=>{
+      const id = req.params.id
+      const status =req.body.status
+      const filter ={_id:new ObjectId(id)}
+      console.log(id,status)
+      const updateDoc ={
+        $set: {
+          status:status
+        }
+      }
+      const result = await employeeRequestAssetsCollection.updateOne(filter,updateDoc)
+      res.send(result)
+    })
+     //update data by id
+  app.put('/adminAddAssets/:id',async(req,res)=>{
+    const id =req.params.id
+    const filter ={_id: new ObjectId(id)}
+    const options = { upsert: true };
+     const updateBlog=req.body;
+     const updateAssets ={
+    $set:{    
+      
+      Product_Name:updateBlog.Product_Name, 
+            Product_Type:updateBlog.Product_Type,
+            Product_Quantity:updateBlog.Product_Quantity,
+            DateAdded:updateBlog.DateAdded
+      
+    }
+  }
+  const result = await adminAssetsCollection.updateOne(filter,updateAssets,options)
+   res.send(result)
+  })
 
   //user related api
     app.post('/users',async(req,res)=>{
