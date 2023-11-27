@@ -9,7 +9,7 @@ app.use(cors())
 app.use(express.json());
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.pl4mu3l.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -28,6 +28,7 @@ async function run() {
 
     const usersCollection =client.db("WealthNest").collection("users")   
     const employeeCollection =client.db("WealthNest").collection("ECustomRequest")
+    const adminAssetsCollection =client.db("WealthNest").collection("adminAddAssets")
     
 //employee related api
 
@@ -36,7 +37,41 @@ async function run() {
       const result =await employeeCollection.insertOne(ECustomRequest)
       res.send(result)
     })
+    
+  app.get('/ECustomRequest',async(req,res)=>{
+    const assets = req.body;
+    const result = await employeeCollection.find(assets).toArray()
+    res.send(result)
 
+   })
+    //admin related
+    app.post('/adminAddAssets',async(req,res)=>{
+      const adminAddAssets = req.body;
+      const result =await adminAssetsCollection.insertOne(adminAddAssets)
+      res.send(result)
+    })
+    
+    app.get('/adminAddAssets',async(req,res)=>{
+       const assets = req.body;
+       const result = await adminAssetsCollection.find(assets).toArray()
+      res.send(result)
+
+    })
+    app.delete('/adminAddAssets/:id',async(req,res)=>{
+      const id =req.params.id;
+      const query ={_id:new ObjectId(id)}
+      const result = await adminAssetsCollection.deleteOne(query)
+      res.send(result)
+    })
+    app.delete('/ECustomRequest/:id',async(req,res)=>{
+      const id =req.params.id;
+      const query ={_id:new ObjectId(id)}
+      const result = await employeeCollection.deleteOne(query)
+      res.send(result)
+    })
+
+
+  //user related api
     app.post('/users',async(req,res)=>{
       const users = req.body;
       const query ={email:users.email}
