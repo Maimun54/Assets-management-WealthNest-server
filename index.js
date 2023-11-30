@@ -2,6 +2,7 @@ const express = require('express')
 const app =express();
 const cors = require('cors')
 require('dotenv').config()
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port =process.env.PORT || 5000
 
 //middleware 
@@ -24,12 +25,14 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const usersCollection =client.db("WealthNest").collection("users")   
     const employeeCollection =client.db("WealthNest").collection("ECustomRequest")
     const adminAssetsCollection =client.db("WealthNest").collection("adminAddAssets")
     const employeeRequestAssetsCollection =client.db("WealthNest").collection("employeeRequestAssets")
+
+    
     
 //employee related api
 
@@ -63,6 +66,11 @@ async function run() {
       const result =await adminAssetsCollection.insertOne(adminAddAssets)
       res.send(result)
     })
+
+   
+    
+    
+
     app.get('/adminAddAssets/:id',async(req,res)=>{
       const id =req.params.id;
       const query ={_id:new ObjectId(id)}
@@ -81,7 +89,8 @@ async function run() {
       const result = await adminAssetsCollection.deleteOne(query)
       res.send(result)
     })
-    app.delete('/EAssetRequest/:id',async(req,res)=>{
+
+    app.delete('/EAssetRequests/:id',async(req,res)=>{
       const id =req.params.id;
       const query ={_id:new ObjectId(id)}
       const result = await employeeRequestAssetsCollection.deleteOne(query)
@@ -121,6 +130,28 @@ async function run() {
   const result = await adminAssetsCollection.updateOne(filter,updateAssets,options)
    res.send(result)
   })
+     // Profile update data by id
+
+  app.put('/users/:id',async(req,res)=>{
+
+    const id =req.params.id
+    const filter ={_id:new ObjectId (id)}
+    const options = { upsert: true };
+     const updateProfile=req.body;
+     const updateUser ={
+    $set:{    
+      
+            name:updateProfile.name, 
+            photo:updateProfile.photo,
+            Birthday:updateProfile.Birthday,
+            email:updateProfile.email
+            
+      
+    }
+  }
+  const result = await usersCollection.updateOne(filter,updateUser,options)
+   res.send(result)
+  })
 
   //user related api
     app.post('/users',async(req,res)=>{
@@ -142,17 +173,87 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/user/:email',async(req,res)=>{
+    app.get('/users/:id',async(req,res)=>{
       
-      const email =req.params.email;
-      const query ={email:email};
-      const result = await usersCollection.find(query).toArray()
+      const id =req.params.id;
+      const query ={_id :new ObjectId(id)};
+      const result = await usersCollection.findOne(query)
+      res.send(result)
+    })
+    
+
+    app.get('/admin/users',async(req,res)=>{
+      
+      
+      const result = await usersCollection.find({role:'employee',haveEmployed:null}).toArray()
+      res.send(result)
+    })
+
+    app.get('/admin/users/list/:email',async(req,res)=>{
+       const email = req.params.email
+      // const query ={email:email}
+
+      const result = await usersCollection.find({role:'employee',haveEmployed:email}).toArray()
+      res.send(result)
+    })
+     
+    app.patch('/admin/users/:id',async(req,res)=>{
+      const id = req.params.id
+      const haveEmployed =req.body.status
+      const filter ={_id:new ObjectId(id)}
+      console.log(id,haveEmployed)
+      const updateDoc ={
+        $set: {
+          haveEmployed:haveEmployed
+        }
+      }
+      const result = await usersCollection.updateOne(filter,updateDoc)
       res.send(result)
     })
 
 
+
+
+    app.get('/user/:email',async(req,res)=>{
+      
+      const email =req.params.email;
+      const query ={email:email};
+      const result = await usersCollection.findOne(query)
+      res.send(result)
+    })
+
+    //payment intend
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100;
+      if (!price || amount < 1) {
+        return;
+      }
+      const { client_secret } = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send(client_secret);
+    });
+
+    app.patch('/admin/extend-employee-limit',async(req,res)=>{
+      const id = req.params.id
+      const status =req.body.status
+      const filter ={_id:new ObjectId(id)}
+      console.log(id,status)
+      const updateDoc ={
+        $set: {
+          status:status
+        }
+      }
+      const result = await employeeRequestAssetsCollection.updateOne(filter,updateDoc)
+      res.send(result)
+    })
+
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
