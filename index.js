@@ -60,6 +60,15 @@ async function run() {
     res.send(result)
 
    })
+
+   app.get('/ECustomRequest/:pending',async(req,res)=>{
+      
+    const pending =req.params.pending;
+    const query ={status:pending};
+    const result = await employeeCollection.find(query).toArray()
+    res.send(result)
+  })
+  
     //admin related
     app.post('/adminAddAssets',async(req,res)=>{
       const adminAddAssets = req.body;
